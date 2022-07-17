@@ -23,9 +23,6 @@ public class World : MonoBehaviour
     [SerializeField]
     private YouController you;
 
-    [SerializeField]
-    private List<AxialCoordinate> coords;
-
     [ContextMenu("Generate")]
     protected void Generate()
     {
@@ -39,7 +36,7 @@ public class World : MonoBehaviour
         
         // Shape the world coords
         var open = new List<AxialCoordinate>();
-        coords.Clear();
+        var coords = new List<AxialCoordinate>();
         open.Add(AxialCoordinate.Zero);
         while (coords.Count < worldSize)
         {
@@ -62,20 +59,29 @@ public class World : MonoBehaviour
         foreach (var coord in coords)
         {
             Settlement settlement = Instantiate(settlementPrefab, coord.ToPixel(0.63f), Quaternion.identity, transform).GetComponent<Settlement>();
-            var settlementStength = rand.Next(10);
-            var settlementType = settlementStength < 5
+            var settlementStrength = rand.Next(10);
+            var settlementType = settlementStrength < 5
                 ? SettlementType.Village
-                : (settlementStength < 8 ? SettlementType.Town : SettlementType.City);
+                : (settlementStrength < 8 ? SettlementType.Town : SettlementType.City);
             settlement.Init(this, coord, settlementType);
-            settlement.name = "Settlement " + settlementType.ToString();
+            settlement.name = "Settlement " + settlementType;
+            if (rand.Next(3) < 1) settlement.TryDepleteResources();
         }
         
         // Spawn you
         you.SetLocation(coords.Last());
     }
 
-    public bool HasTileAt(AxialCoordinate location)
+    public Settlement GetSettlementAt(AxialCoordinate location)
     {
-        return coords.Contains(location);
+        foreach (Transform child in transform)
+        {
+            Settlement s = child.GetComponent<Settlement>();
+            if (s.GetLocation() == location)
+            {
+                return s;
+            }
+        }
+        return null;
     }
 }

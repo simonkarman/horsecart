@@ -1,12 +1,26 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class YouController : MonoBehaviour
 {
     [SerializeField]
     private World world;
+    
+    [SerializeField]
+    private int bread = 10;
+    
+    [SerializeField]
+    private int gold = 10;
+
+    [SerializeField]
+    private TMP_Text breadText;
+    
+    [SerializeField]
+    private TMP_Text goldText;
     
     protected void Update()
     {
@@ -25,16 +39,71 @@ public class YouController : MonoBehaviour
         {
             direction = AxialCoordinate.LeftDown;
         }
-        AxialCoordinate location = AxialCoordinate.FromPixel(transform.position, 0.63f);
-        if (CanMoveTo(location + direction))
+
+        var location = AxialCoordinate.FromPixel(transform.position, 0.63f).Rounded();
+        if (direction != AxialCoordinate.Zero)
         {
-            SetLocation(location + direction);
+            TryMoveTo(location + direction);
+        } else if (Input.GetKeyUp(KeyCode.Space))
+        {
+            var settlement = world.GetSettlementAt(location);
+            var breadCost = 0;
+            var goldCost = 0;
+            switch (settlement.GetSettlementType())
+            {
+                case SettlementType.Village:
+                    breadCost = 1;
+                    break;
+                case SettlementType.City:
+                    goldCost = 1;
+                    break;
+                case SettlementType.Town:
+                default:
+                    break;
+            }
+
+            if (bread < breadCost || gold < goldCost || !settlement.TryDepleteResources()) return;
+            switch (settlement.GetSettlementType())
+            {
+                case SettlementType.Village:
+                    gold += 3;
+                    break;
+                case SettlementType.City:
+                    bread += 3;
+                    break;
+                case SettlementType.Town:
+                default:
+                    break;
+            }
+            bread -= breadCost;
+            gold -= goldCost;
+            UpdateUI();
         }
     }
 
-    private bool CanMoveTo(AxialCoordinate location)
+    private void TryMoveTo(AxialCoordinate location)
     {
-        return world.HasTileAt(location);
+        var settlement = world.GetSettlementAt(location);
+        if (settlement == null) {
+            return;
+        }
+
+        var breadCost = settlement.GetSettlementType() == SettlementType.Village ? 2 : 1;
+        var goldCost = (int)settlement.GetSettlementType();
+        if (bread < breadCost || gold < goldCost) {
+            return;
+        }
+        
+        bread -= breadCost;
+        gold -= goldCost;
+        UpdateUI();
+        SetLocation(location);
+    }
+
+    private void UpdateUI()
+    {
+        breadText.text = bread.ToString();
+        goldText.text = gold.ToString();
     }
 
     public void SetLocation(AxialCoordinate location)
